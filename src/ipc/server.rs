@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::ffi::OsStr;
+use std::future::Future;
 use std::ops::Deref;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
@@ -14,10 +15,11 @@ use anyhow::Context;
 use async_channel::{Receiver, Sender, TrySendError};
 use calloop::io::Async;
 use directories::BaseDirs;
-use futures_util::io::{AsyncBufRead, AsyncReadExt, BufReader, ReadHalf};
-use futures_util::stream::{AbortHandle, Abortable};
-use futures_util::{pin_mut, poll};
-use futures_util::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, FutureExt as _, StreamExt};
+use futures_util::future::{Either, FutureExt};
+use futures_util::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, BufReader, ReadHalf};
+use futures_util::io::{AsyncWrite, AsyncWriteExt};
+use futures_util::pin_mut;
+use futures_util::stream::{AbortHandle, Abortable, Stream, StreamExt};
 use niri_config::OutputName;
 use niri_ipc::state::{EventStreamState, EventStreamStatePart as _};
 use niri_ipc::{Event, KeyboardLayouts, OutputConfigChanged, Reply, Request, Response, Workspace};
@@ -195,6 +197,22 @@ where
     write.write_all(buf).await.context("error writing reply")
 }
 
+struct OptionStream<S>(Option<S>);
+
+impl<S> Future for OptionStream<S>
+where
+    S: Stream + Unpin,
+{
+    type Output = Option<S::Item>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match &mut self.as_mut().0 {
+            Some(stream) => stream.poll_next_unpin(cx),
+            None => Poll::Pending,
+        }
+    }
+}
+
 async fn handle_client(ctx: ClientCtx, stream: Async<'static, UnixStream>) -> anyhow::Result<()> {
     let (read, mut write) = stream.split();
 
@@ -209,45 +227,50 @@ async fn handle_client(ctx: ClientCtx, stream: Async<'static, UnixStream>) -> an
 
     let mut output_buf = Vec::<u8>::new();
 
+    // First check whether there are new events from the `EventStream` and then read and process
+    // messages from the socket.
     loop {
-        if let Some(stream) = &mut event_stream.as_mut().as_pin_mut() {
-            while let Poll::Ready(event) = poll!(stream.next()) {
-                // Close the client when an event_stream and it was canceled for any reason
+        match futures_util::future::select(
+            OptionStream(event_stream.as_mut().as_pin_mut()),
+            read_line_fut.as_mut(),
+        )
+        .await
+        {
+            Either::Left((event, _)) => {
+                // Close the client when its event_stream was closed for any reason
                 let Some(event) = event else { return Ok(()) };
                 write_json_reply(&mut write, &mut output_buf, &event).await?;
             }
-        }
-
-        {
-            let (res, read, input_buf) = read_line_fut.as_mut().await;
-            match res {
-                Ok(0) => continue,
-                Ok(_) => {}
-                Err(err) if err.kind() == io::ErrorKind::BrokenPipe => return Ok(()),
-                Err(err) => {
-                    return Err(err).context("error parsing request");
+            Either::Right(((res, read, input_buf), _)) => {
+                match res {
+                    Ok(0) => continue,
+                    Ok(_) => {}
+                    Err(err) if err.kind() == io::ErrorKind::BrokenPipe => return Ok(()),
+                    Err(err) => {
+                        return Err(err).context("error parsing request");
+                    }
                 }
-            }
 
-            let request = serde_json::from_slice(input_buf)
-                .context("error parsing request")
-                .map_err(|err| err.to_string());
-            let requested_error = matches!(request, Ok(Request::ReturnError));
+                let request = serde_json::from_slice(input_buf)
+                    .context("error parsing request")
+                    .map_err(|err| err.to_string());
+                let requested_error = matches!(request, Ok(Request::ReturnError));
 
-            let reply = match request {
-                Ok(request) => process_request(&ctx, request, &mut event_stream).await,
-                Err(err) => Err(err),
-            };
+                let reply = match request {
+                    Ok(request) => process_request(&ctx, request, &mut event_stream).await,
+                    Err(err) => Err(err),
+                };
 
-            if let Err(err) = &reply {
-                if !requested_error {
-                    warn!("error processing IPC request: {err:?}");
+                if let Err(err) = &reply {
+                    if !requested_error {
+                        warn!("error processing IPC request: {err:?}");
+                    }
                 }
+
+                write_json_reply(&mut write, &mut output_buf, &reply).await?;
+
+                read_line_fut.set(read_line(read, input_buf).fuse());
             }
-
-            write_json_reply(&mut write, &mut output_buf, &reply).await?;
-
-            read_line_fut.set(read_line(read, input_buf).fuse());
         }
     }
 }
@@ -395,8 +418,12 @@ async fn process_request(
         Request::EventStream => {
             // A lot of pin transformations here, but basically it comes down to to just
             // ```rust
-            // Option<bool>::unwrap_or(true)
+            // Option<Abortable>::map(Abortable::is_aborted)::unwrap_or(true)
             // ```
+            // to make sure we don't open *two* `EventStream`s for one client.
+            //
+            // Theoretically doing that *should* be fine, but I don't see any case where that would
+            // be something the client actually wants.
             if event_stream
                 .as_ref()
                 .as_pin_ref()
@@ -430,9 +457,11 @@ async fn process_request(
 
                 Response::Handled
             } else {
-                // How should we handle trying to register with an exiting stream
-                // For now just act as if we set it up. Even though we are still using the current
-                // stream.
+                // How should we handle trying to register a new stream when there already is one.
+                // For now just act as if we did set it up.
+                // Even though we are still using the current stream.
+                //
+                // *Maybe* this could be used to request sending the initial state again?
                 Response::Handled
             }
         }
