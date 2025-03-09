@@ -5,7 +5,7 @@ use std::fmt::Write as _;
 use std::iter::zip;
 use std::rc::Rc;
 
-use niri_config::{Action, Bind, Config, Key, ModKey, Modifiers, Trigger};
+use niri_config::{Action, Bind, Config, Key, ModKey, Modifiers, Submap, Trigger};
 use pangocairo::cairo::{self, ImageSurface};
 use pangocairo::pango::{AttrColor, AttrInt, AttrList, AttrString, FontDescription, Weight};
 use smithay::backend::renderer::element::Kind;
@@ -30,6 +30,7 @@ const TITLE: &str = "Important Hotkeys";
 pub struct HotkeyOverlay {
     is_open: bool,
     config: Rc<RefCell<Config>>,
+    submap_state: Submap,
     mod_key: ModKey,
     buffers: RefCell<HashMap<WeakOutput, RenderedOverlay>>,
 }
@@ -43,6 +44,7 @@ impl HotkeyOverlay {
         Self {
             is_open: false,
             config,
+            submap_state: Submap::Default,
             mod_key,
             buffers: RefCell::new(HashMap::new()),
         }
@@ -68,6 +70,10 @@ impl HotkeyOverlay {
 
     pub fn is_open(&self) -> bool {
         self.is_open
+    }
+
+    pub fn set_submap_state(&mut self, submap_state: Submap) {
+        self.submap_state = submap_state;
     }
 
     pub fn on_hotkey_config_updated(&mut self, mod_key: ModKey) {
@@ -102,8 +108,14 @@ impl HotkeyOverlay {
 
         let rendered = buffers.entry(weak).or_insert_with(|| {
             let renderer = renderer.as_gles_renderer();
-            render(renderer, &self.config.borrow(), self.mod_key, scale)
-                .unwrap_or_else(|_| RenderedOverlay { buffer: None })
+            render(
+                renderer,
+                &self.config.borrow(),
+                &self.submap_state,
+                self.mod_key,
+                scale,
+            )
+            .unwrap_or_else(|_| RenderedOverlay { buffer: None })
         });
         let buffer = rendered.buffer.as_ref()?;
 
@@ -125,15 +137,23 @@ impl HotkeyOverlay {
         Some(PrimaryGpuTextureRenderElement(elem))
     }
 
-    pub fn a11y_text(&self) -> String {
+    pub fn a11y_text(&self, submap_state: &Submap) -> String {
         let config = self.config.borrow();
-        let actions = collect_actions(&config);
+        let actions = collect_actions(&config, submap_state);
 
         let mut buf = String::new();
         writeln!(&mut buf, "{TITLE}").unwrap();
 
         for action in actions {
-            let Some((key, action)) = format_bind(&config.binds.0, action) else {
+            let Some((key, action)) = format_bind(
+                config
+                    .binds
+                    .0
+                    .get(submap_state)
+                    .map(|vec| vec.as_slice())
+                    .unwrap_or(&[]),
+                action,
+            ) else {
                 continue;
             };
 
@@ -194,8 +214,13 @@ fn format_bind(binds: &[Bind], action: &Action) -> Option<(Option<Key>, String)>
     Some((key, title))
 }
 
-fn collect_actions(config: &Config) -> Vec<&Action> {
-    let binds = &config.binds.0;
+fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Action> {
+    let binds = config
+        .binds
+        .0
+        .get(submap_state)
+        .map(|vec| vec.as_slice())
+        .unwrap_or(&[]);
 
     // Collect actions that we want to show.
     let mut actions = vec![&Action::ShowHotkeyOverlay];
@@ -306,6 +331,7 @@ fn collect_actions(config: &Config) -> Vec<&Action> {
 fn render(
     renderer: &mut GlesRenderer,
     config: &Config,
+    submap_state: &Submap,
     mod_key: ModKey,
     scale: f64,
 ) -> anyhow::Result<RenderedOverlay> {
@@ -321,9 +347,19 @@ fn render(
     // target_size.h -= margin * 2;
     // anyhow::ensure!(target_size.w > 0 && target_size.h > 0);
 
-    let strings = collect_actions(config)
+    let strings = collect_actions(config, submap_state)
         .into_iter()
-        .filter_map(|action| format_bind(&config.binds.0, action))
+        .filter_map(|action| {
+            format_bind(
+                config
+                    .binds
+                    .0
+                    .get(submap_state)
+                    .map(|vec| vec.as_slice())
+                    .unwrap_or(&[]),
+                action,
+            )
+        })
         .map(|(key, action)| {
             let key = key.map(|key| key_name(false, mod_key, &key));
             let key = key.as_deref().unwrap_or("(not bound)");
@@ -608,7 +644,15 @@ mod tests {
     #[track_caller]
     fn check(config: &str, action: Action) -> String {
         let config = Config::parse_mem(config).unwrap();
-        if let Some((key, title)) = format_bind(&config.binds.0, &action) {
+        if let Some((key, title)) = format_bind(
+            &config
+                .binds
+                .0
+                .get(Submap::Default)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+            &action,
+        ) {
             let key = key.map(|key| key_name(false, ModKey::Super, &key));
             let key = key.as_deref().unwrap_or("(not bound)");
             format!(" {key} : {title}")

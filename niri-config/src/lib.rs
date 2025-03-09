@@ -219,11 +219,18 @@ where
                     // where you import some preconfigured-dots.kdl, then override some binds with
                     // your own.
                     let mut config = config.borrow_mut();
-                    let binds = &mut config.binds.0;
-                    // Remove existing binds matching any new bind.
-                    binds.retain(|bind| !part.0.iter().any(|new| new.key == bind.key));
-                    // Add all new binds.
-                    binds.extend(part.0);
+                    for (submap, new) in part.0 {
+                        config
+                            .binds
+                            .0
+                            .entry(submap)
+                            .and_modify(|binds| {
+                                // Remove existing binds matching any new bind.
+                                binds.retain(|bind| !new.iter().any(|new| new.key == bind.key))
+                            })
+                            .or_default()
+                            .extend(new);
+                    }
                 }
                 "environment" => {
                     let part = Environment::decode_node(node, ctx)?;

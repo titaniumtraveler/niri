@@ -267,7 +267,7 @@ impl Niri {
             return;
         }
 
-        self.a11y_announce(self.hotkey_overlay.a11y_text());
+        self.a11y_announce(self.hotkey_overlay.a11y_text(&self.submap_state));
     }
 
     fn a11y_focus(&self) -> NodeId {

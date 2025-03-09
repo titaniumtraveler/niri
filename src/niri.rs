@@ -15,7 +15,7 @@ use anyhow::{bail, ensure, Context};
 use calloop::futures::Scheduler;
 use niri_config::debug::PreviewRender;
 use niri_config::{
-    Config, FloatOrInt, Key, Modifiers, OutputName, TrackLayout, WarpMouseToFocusMode,
+    Config, FloatOrInt, Key, Modifiers, OutputName, Submap, TrackLayout, WarpMouseToFocusMode,
     WorkspaceReference, Xkb,
 };
 use smithay::backend::allocator::Fourcc;
@@ -318,6 +318,7 @@ pub struct Niri {
     pub seat: Seat<State>,
     /// Scancodes of the keys to suppress.
     pub suppressed_keys: HashSet<Keycode>,
+    pub submap_state: Submap,
     /// Button codes of the mouse buttons to suppress.
     pub suppressed_buttons: HashSet<u32>,
     pub bind_cooldown_timers: HashMap<Key, RegistrationToken>,
@@ -721,8 +722,10 @@ impl State {
             Backend::Tty(tty)
         };
 
+        let submap_state = Rc::new(RefCell::new(Submap::Default));
         let mut niri = Niri::new(
             config.clone(),
+            submap_state,
             event_loop,
             stop_signal,
             display,
@@ -2163,6 +2166,7 @@ impl State {
 impl Niri {
     pub fn new(
         config: Rc<RefCell<Config>>,
+        submap_state: Rc<RefCell<Submap>>,
         event_loop: LoopHandle<'static, State>,
         stop_signal: LoopSignal,
         display: Display<State>,
@@ -2344,7 +2348,7 @@ impl Niri {
         let mods_with_finger_scroll_binds = mods_with_finger_scroll_binds(mod_key, &config_.binds);
 
         let screenshot_ui = ScreenshotUi::new(animation_clock.clone(), config.clone());
-        let window_mru_ui = WindowMruUi::new(config.clone());
+        let window_mru_ui = WindowMruUi::new(config.clone(), submap_state.clone());
         let config_error_notification =
             ConfigErrorNotification::new(animation_clock.clone(), config.clone());
 
@@ -2487,6 +2491,7 @@ impl Niri {
             popups: PopupManager::default(),
             popup_grab: None,
             suppressed_keys: HashSet::new(),
+            submap_state: Submap::Default,
             suppressed_buttons: HashSet::new(),
             bind_cooldown_timers: HashMap::new(),
             bind_repeat_timer: Option::default(),
@@ -6091,6 +6096,10 @@ impl Niri {
         if let Some(output) = self.window_mru_ui.output().cloned() {
             self.queue_redraw(&output);
         }
+    }
+
+    pub fn set_submap(&mut self, submap_state: Submap) {
+        self.submap_state = submap_state;
     }
 }
 

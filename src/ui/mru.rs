@@ -8,7 +8,7 @@ use std::time::Duration;
 use anyhow::ensure;
 use niri_config::{
     Action, Bind, Color, Config, CornerRadius, GradientInterpolation, Key, Modifiers, MruDirection,
-    MruFilter, MruScope, Trigger,
+    MruFilter, MruScope, Submap, Trigger,
 };
 use pango::FontDescription;
 use pangocairo::cairo::{self, ImageSurface};
@@ -100,6 +100,7 @@ pub struct WindowMruUi {
     preset_opened_binds: Vec<Bind>,
     dynamic_opened_binds: Vec<Bind>,
     config: Rc<RefCell<Config>>,
+    submap: Rc<RefCell<Submap>>,
 }
 
 pub enum MruCloseRequest {
@@ -897,7 +898,7 @@ impl ViewPos {
 }
 
 impl WindowMruUi {
-    pub fn new(config: Rc<RefCell<Config>>) -> Self {
+    pub fn new(config: Rc<RefCell<Config>>, submap: Rc<RefCell<Submap>>) -> Self {
         let mut rv = Self {
             state: UiState::Closed {
                 previous_scope: MruScope::default(),
@@ -905,13 +906,15 @@ impl WindowMruUi {
             preset_opened_binds: make_preset_opened_binds(),
             dynamic_opened_binds: Vec::new(),
             config,
+            submap,
         };
         rv.update_binds();
         rv
     }
 
     pub fn update_binds(&mut self) {
-        self.dynamic_opened_binds = make_dynamic_opened_binds(&self.config.borrow());
+        self.dynamic_opened_binds =
+            make_dynamic_opened_binds(&self.config.borrow(), &self.submap.borrow());
     }
 
     pub fn update_config(&mut self) {
@@ -1882,10 +1885,10 @@ fn make_preset_opened_binds() -> Vec<Bind> {
 /// Returns dynamic key bindings available when the MRU UI is open.
 ///
 /// These ones are generated based on the normal bindings.
-fn make_dynamic_opened_binds(config: &Config) -> Vec<Bind> {
+fn make_dynamic_opened_binds(config: &Config, submap: &Submap) -> Vec<Bind> {
     let mut binds: HashMap<Trigger, Vec<Bind>> = HashMap::new();
 
-    for bind in &config.binds.0 {
+    for bind in config.binds.0.get(submap).map(Vec::as_slice).unwrap_or(&[]) {
         let action = match &bind.action {
             Action::FocusColumnRight
             | Action::FocusColumnRightOrFirst
