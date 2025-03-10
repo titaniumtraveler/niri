@@ -478,12 +478,16 @@ impl State {
 
     pub fn handle_bind(&mut self, bind: Bind) {
         let Some(cooldown) = bind.cooldown else {
-            self.do_action(bind.action, bind.allow_when_locked);
+            for action in bind.actions {
+                self.do_action(action, bind.allow_when_locked);
+            }
             return;
         };
 
         // Check this first so that it doesn't trigger the cooldown.
-        if self.niri.is_locked() && !(bind.allow_when_locked || allowed_when_locked(&bind.action)) {
+        if self.niri.is_locked()
+            && !(bind.allow_when_locked || bind.actions.iter().any(allowed_when_locked))
+        {
             return;
         }
 
@@ -504,7 +508,9 @@ impl State {
                     .unwrap();
                 entry.insert(token);
 
-                self.do_action(bind.action, bind.allow_when_locked);
+                for action in bind.actions {
+                    self.do_action(action, bind.allow_when_locked);
+                }
             }
         }
     }
@@ -3094,7 +3100,7 @@ fn should_intercept_key(
         let mut use_screenshot_ui_action = true;
 
         if let Some(bind) = &final_bind {
-            if allowed_during_screenshot(&bind.action) {
+            if bind.actions.iter().any(allowed_during_screenshot) {
                 use_screenshot_ui_action = false;
             }
         }
@@ -3107,7 +3113,7 @@ fn should_intercept_key(
                         // Not entirely correct but it doesn't matter in how we currently use it.
                         modifiers: Modifiers::empty(),
                     },
-                    action,
+                    actions: vec![action],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,
@@ -3172,7 +3178,7 @@ fn find_bind(
                 trigger: Trigger::Keysym(modified),
                 modifiers: Modifiers::empty(),
             },
-            action,
+            actions: vec![action],
             repeat: true,
             cooldown: None,
             allow_when_locked: false,
@@ -3691,7 +3697,7 @@ mod tests {
                     trigger: Trigger::Keysym(close_keysym),
                     modifiers: Modifiers::COMPOSITOR | Modifiers::CTRL,
                 },
-                action: Action::CloseWindow,
+                actions: vec![Action::CloseWindow],
                 repeat: true,
                 cooldown: None,
                 allow_when_locked: false,
@@ -3755,13 +3761,11 @@ mod tests {
         // Action press/release.
 
         let filter = close_key_event(&mut suppressed_keys, mods, true);
-        assert!(matches!(
-            filter,
-            FilterResult::Intercept(Some(Bind {
-                action: Action::CloseWindow,
-                ..
-            }))
-        ));
+
+        let FilterResult::Intercept(Some(Bind { actions, .. })) = filter else {
+            panic!();
+        };
+        assert_eq!(actions, [Action::CloseWindow]);
         assert!(suppressed_keys.contains(&close_key_code));
 
         let filter = close_key_event(&mut suppressed_keys, mods, false);
@@ -3789,13 +3793,10 @@ mod tests {
         // Press action, press arbitrary, release action, release arbitrary.
 
         let filter = close_key_event(&mut suppressed_keys, mods, true);
-        assert!(matches!(
-            filter,
-            FilterResult::Intercept(Some(Bind {
-                action: Action::CloseWindow,
-                ..
-            }))
-        ));
+        let FilterResult::Intercept(Some(Bind { actions, .. })) = filter else {
+            panic!();
+        };
+        assert_eq!(actions, [Action::CloseWindow]);
 
         let filter = none_key_event(&mut suppressed_keys, mods, true);
         assert!(matches!(filter, FilterResult::Forward));
@@ -3809,13 +3810,10 @@ mod tests {
         // Trigger and remove all mods.
 
         let filter = close_key_event(&mut suppressed_keys, mods, true);
-        assert!(matches!(
-            filter,
-            FilterResult::Intercept(Some(Bind {
-                action: Action::CloseWindow,
-                ..
-            }))
-        ));
+        let FilterResult::Intercept(Some(Bind { actions, .. })) = filter else {
+            panic!();
+        };
+        assert_eq!(actions, [Action::CloseWindow]);
 
         mods = Default::default();
         let filter = close_key_event(&mut suppressed_keys, mods, false);
@@ -3856,13 +3854,10 @@ mod tests {
 
         // Toggle it on after pressing the shortcut.
         let filter = close_key_event(&mut suppressed_keys, mods, true);
-        assert!(matches!(
-            filter,
-            FilterResult::Intercept(Some(Bind {
-                action: Action::CloseWindow,
-                ..
-            }))
-        ));
+        let FilterResult::Intercept(Some(Bind { actions, .. })) = filter else {
+            panic!();
+        };
+        assert_eq!(actions, [Action::CloseWindow]);
         assert!(suppressed_keys.contains(&close_key_code));
 
         is_inhibiting_shortcuts.set(true);
@@ -3882,7 +3877,7 @@ mod tests {
                         trigger: Trigger::Keysym(Keysym::q),
                         modifiers: Modifiers::COMPOSITOR,
                     },
-                    action: Action::CloseWindow,
+                    actions: vec![Action::CloseWindow],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,
@@ -3894,7 +3889,7 @@ mod tests {
                         trigger: Trigger::Keysym(Keysym::h),
                         modifiers: Modifiers::SUPER,
                     },
-                    action: Action::FocusColumnLeft,
+                    actions: vec![Action::FocusColumnLeft],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,
@@ -3906,7 +3901,7 @@ mod tests {
                         trigger: Trigger::Keysym(Keysym::j),
                         modifiers: Modifiers::empty(),
                     },
-                    action: Action::FocusWindowDown,
+                    actions: vec![Action::FocusWindowDown],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,
@@ -3918,7 +3913,7 @@ mod tests {
                         trigger: Trigger::Keysym(Keysym::k),
                         modifiers: Modifiers::COMPOSITOR | Modifiers::SUPER,
                     },
-                    action: Action::FocusWindowUp,
+                    actions: vec![Action::FocusWindowUp],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,
@@ -3930,7 +3925,7 @@ mod tests {
                         trigger: Trigger::Keysym(Keysym::l),
                         modifiers: Modifiers::SUPER | Modifiers::ALT,
                     },
-                    action: Action::FocusColumnRight,
+                    actions: vec![Action::FocusColumnRight],
                     repeat: true,
                     cooldown: None,
                     allow_when_locked: false,

@@ -148,7 +148,7 @@ fn format_bind(
     let mut found_null_title = false;
 
     for bind in binds {
-        if bind.action != *action {
+        if bind.actions[0] != *action {
             continue;
         }
 
@@ -215,9 +215,15 @@ fn render(
 
     // Prefer Quit(false) if found, otherwise try Quit(true), and if there's neither, fall back to
     // Quit(false).
-    if binds.iter().any(|bind| bind.action == Action::Quit(false)) {
+    if binds
+        .iter()
+        .any(|bind| bind.actions == vec![Action::Quit(false)])
+    {
         actions.push(&Action::Quit(false));
-    } else if binds.iter().any(|bind| bind.action == Action::Quit(true)) {
+    } else if binds
+        .iter()
+        .any(|bind| bind.actions == vec![Action::Quit(true)])
+    {
         actions.push(&Action::Quit(true));
     } else {
         actions.push(&Action::Quit(false));
@@ -236,12 +242,12 @@ fn render(
     // Prefer move-column-to-workspace-down, but fall back to move-window-to-workspace-down.
     if binds
         .iter()
-        .any(|bind| bind.action == Action::MoveColumnToWorkspaceDown)
+        .any(|bind| bind.actions == vec![Action::MoveColumnToWorkspaceDown])
     {
         actions.push(&Action::MoveColumnToWorkspaceDown);
     } else if binds
         .iter()
-        .any(|bind| bind.action == Action::MoveWindowToWorkspaceDown)
+        .any(|bind| bind.actions == vec![Action::MoveWindowToWorkspaceDown])
     {
         actions.push(&Action::MoveWindowToWorkspaceDown);
     } else {
@@ -251,12 +257,12 @@ fn render(
     // Same for -up.
     if binds
         .iter()
-        .any(|bind| bind.action == Action::MoveColumnToWorkspaceUp)
+        .any(|bind| bind.actions == vec![Action::MoveColumnToWorkspaceUp])
     {
         actions.push(&Action::MoveColumnToWorkspaceUp);
     } else if binds
         .iter()
-        .any(|bind| bind.action == Action::MoveWindowToWorkspaceUp)
+        .any(|bind| bind.actions == vec![Action::MoveWindowToWorkspaceUp])
     {
         actions.push(&Action::MoveWindowToWorkspaceUp);
     } else {
@@ -273,7 +279,10 @@ fn render(
     ]);
 
     // Screenshot is not as important, can omit if not bound.
-    if binds.iter().any(|bind| bind.action == Action::Screenshot) {
+    if binds
+        .iter()
+        .any(|bind| bind.actions == vec![Action::Screenshot])
+    {
         actions.push(&Action::Screenshot);
     }
 
@@ -281,22 +290,22 @@ fn render(
     for bind in binds {
         if matches!(bind.hotkey_overlay_title, Some(Some(_))) {
             // Avoid duplicate actions.
-            if !actions.contains(&&bind.action) {
-                actions.push(&bind.action);
+            if !actions.contains(&&bind.actions[0]) {
+                actions.push(&bind.actions[0]);
             }
         }
     }
 
     // Add the spawn actions.
     for bind in binds.iter().filter(|bind| {
-        matches!(bind.action, Action::Spawn(_))
+        matches!(&bind.actions[..], [Action::Spawn(_)])
             // Only show binds with Mod or Super to filter out stuff like volume up/down.
             && (bind.key.modifiers.contains(Modifiers::COMPOSITOR)
                 || bind.key.modifiers.contains(Modifiers::SUPER))
             // Also filter out wheel and touchpad scroll binds.
             && matches!(bind.key.trigger, Trigger::Keysym(_))
     }) {
-        let action = &bind.action;
+        let action = &bind.actions[0];
 
         // We only show one bind for each action, so we need to deduplicate the Spawn actions.
         if !actions.contains(&action) {

@@ -1370,7 +1370,7 @@ pub struct Binds(pub HashMap<Submap, Vec<Bind>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bind {
     pub key: Key,
-    pub action: Action,
+    pub actions: Vec<Action>,
     pub repeat: bool,
     pub cooldown: Option<Duration>,
     pub allow_when_locked: bool,
@@ -1741,6 +1741,7 @@ impl<S: knuffel::traits::ErrorSpan> knuffel::DecodeScalar<S> for Submap {
         match &**val {
             knuffel::ast::Literal::String(ref s) => match &s[..] {
                 "default" => Ok(Submap::Default),
+                "<current>" => Ok(Submap::ResolveCurrent),
                 other => Ok(Submap::Custom(other.to_owned())),
             },
             _ => Err(::knuffel::errors::DecodeError::scalar_kind(
@@ -3502,56 +3503,20 @@ where
             }
         }
 
-        let mut children = node.children();
-
-        // If the action is invalid but the key is fine, we still want to return something.
-        // That way, the parent can handle the existence of duplicate keybinds,
-        // even if their contents are not valid.
-        let dummy = Self {
-            bind: Bind {
-                key,
-                action: Action::Spawn(vec![]),
-                repeat: true,
-                cooldown: None,
-                allow_when_locked: false,
-                allow_inhibiting: true,
-                hotkey_overlay_title: None,
-            },
-            submap,
-            subbinds: Vec::new(),
-        };
-
         let mut subbinds = Vec::new();
+        let mut actions = Vec::new();
 
-        if let Some(child) = children.next() {
+        for child in node.children() {
             if Key::from_str(&child.node_name).is_ok() {
-                subbinds.push(BindWithSubmap::decode_node(child, ctx)?);
-
-                for child in children {
-                    subbinds.push(BindWithSubmap::decode_node(child, ctx)?);
+                match BindWithSubmap::decode_node(child, ctx) {
+                    Ok(submap) => {
+                        subbinds.push(submap);
+                    }
+                    Err(e) => {
+                        ctx.emit_error(e);
+                    }
                 }
-
-                Ok(Self {
-                    bind: Bind {
-                        key,
-                        action: Action::SubmapSet(Submap::ResolveCurrent),
-                        repeat,
-                        cooldown,
-                        allow_when_locked,
-                        allow_inhibiting,
-                        hotkey_overlay_title,
-                    },
-                    submap: dummy.submap,
-                    subbinds,
-                })
             } else {
-                for unwanted_child in children {
-                    ctx.emit_error(DecodeError::unexpected(
-                        unwanted_child,
-                        "node",
-                        "only one action is allowed per keybind",
-                    ));
-                }
                 match Action::decode_node(child, ctx) {
                     Ok(action) => {
                         if !matches!(action, Action::Spawn(_)) {
@@ -3564,39 +3529,46 @@ where
                             }
                         }
 
+                        // FIXME: Does this still apply with multiple actions?
                         // The toggle-inhibit action must always be uninhibitable.
                         // Otherwise, it would be impossible to trigger it.
                         if matches!(action, Action::ToggleKeyboardShortcutsInhibit) {
                             allow_inhibiting = false;
                         }
-
-                        Ok(Self {
-                            bind: Bind {
-                                key,
-                                action,
-                                repeat,
-                                cooldown,
-                                allow_when_locked,
-                                allow_inhibiting,
-                                hotkey_overlay_title,
-                            },
-                            submap: dummy.submap,
-                            subbinds,
-                        })
+                        actions.push(action);
                     }
                     Err(e) => {
                         ctx.emit_error(e);
-                        Ok(dummy)
                     }
                 }
             }
-        } else {
-            ctx.emit_error(DecodeError::missing(
-                node,
-                "expected an action for this keybind",
-            ));
-            Ok(dummy)
         }
+
+        // Default to entering the current subbind if there are no actions configured
+        if actions.is_empty() {
+            if subbinds.is_empty() {
+                ctx.emit_error(DecodeError::missing(
+                    node,
+                    "expected an action or subbind in this keybind",
+                ));
+            } else {
+                actions.push(Action::SubmapSet(Submap::ResolveCurrent));
+            }
+        }
+
+        Ok(Self {
+            bind: Bind {
+                key,
+                actions,
+                repeat,
+                cooldown,
+                allow_when_locked,
+                allow_inhibiting,
+                hotkey_overlay_title,
+            },
+            submap,
+            subbinds,
+        })
     }
 }
 
@@ -3623,12 +3595,14 @@ impl BindWithSubmap {
     }
 
     fn resolve_submap_action(&mut self, current: &str) {
-        if let Action::SubmapSet(action @ Submap::ResolveCurrent) = &mut self.bind.action {
-            *action = if current.is_empty() {
-                Submap::Default
-            } else {
-                Submap::Custom(current.to_owned())
-            };
+        for action in &mut self.bind.actions {
+            if let Action::SubmapSet(action @ Submap::ResolveCurrent) = action {
+                *action = if current.is_empty() {
+                    Submap::Default
+                } else {
+                    Submap::Custom(current.to_owned())
+                };
+            }
         }
     }
 
