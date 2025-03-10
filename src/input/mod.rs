@@ -2072,7 +2072,9 @@ impl State {
                 let window = mapped.window.clone();
 
                 // Check if we need to start an interactive move.
-                if button == Some(MouseButton::Left) && !pointer.is_grabbed() {
+                if let (Some(MouseButton::Left), false, false) =
+                    (button, mods.shift, pointer.is_grabbed())
+                {
                     let mod_down = match self.backend.mod_key() {
                         CompositorMod::Super => mods.logo,
                         CompositorMod::Alt => mods.alt,
@@ -2103,7 +2105,10 @@ impl State {
                     }
                 }
                 // Check if we need to start an interactive resize.
-                else if button == Some(MouseButton::Right) && !pointer.is_grabbed() {
+                else if let (Some(MouseButton::Right), false, false)
+                | (Some(MouseButton::Left), true, false) =
+                    (button, mods.shift, pointer.is_grabbed())
+                {
                     let mod_down = match self.backend.mod_key() {
                         CompositorMod::Super => mods.logo,
                         CompositorMod::Alt => mods.alt,
