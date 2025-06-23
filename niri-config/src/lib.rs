@@ -24,6 +24,7 @@ use std::rc::Rc;
 use knuffel::errors::DecodeError;
 use knuffel::Decode as _;
 use miette::{miette, Context as _, IntoDiagnostic as _};
+use serde::Serialize;
 
 #[macro_use]
 pub mod macros;
@@ -64,7 +65,7 @@ pub use crate::workspace::{Workspace, WorkspaceLayoutPart};
 
 const RECURSION_LIMIT: u8 = 10;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub struct Config {
     pub input: Input,
     pub outputs: Outputs,

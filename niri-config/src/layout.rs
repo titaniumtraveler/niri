@@ -1,5 +1,6 @@
 use knuffel::errors::DecodeError;
 use niri_ipc::{ColumnDisplay, SizeChange};
+use serde::Serialize;
 
 use crate::appearance::{
     Border, FocusRing, InsertHint, Shadow, TabIndicator, DEFAULT_BACKGROUND_COLOR,
@@ -7,7 +8,7 @@ use crate::appearance::{
 use crate::utils::{expect_only_children, Flag, MergeWith};
 use crate::{BorderRule, Color, FloatOrInt, InsertHintPart, ShadowRule, TabIndicatorPart};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Layout {
     pub focus_ring: FocusRing,
     pub border: Border,
@@ -94,7 +95,7 @@ impl MergeWith<LayoutPart> for Layout {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct LayoutPart {
     #[knuffel(child)]
     pub focus_ring: Option<BorderRule>,
@@ -128,7 +129,7 @@ pub struct LayoutPart {
     pub background_color: Option<Color>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum PresetSize {
     Proportion(#[knuffel(argument)] f64),
     Fixed(#[knuffel(argument)] i32),
@@ -143,10 +144,10 @@ impl From<PresetSize> for SizeChange {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct DefaultPresetSize(pub Option<PresetSize>);
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct Struts {
     #[knuffel(child, unwrap(argument), default)]
     pub left: FloatOrInt<-65535, 65535>,
@@ -158,7 +159,7 @@ pub struct Struts {
     pub bottom: FloatOrInt<-65535, 65535>,
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(knuffel::DecodeScalar, Debug, Default, PartialEq, Eq, Clone, Copy, Serialize)]
 pub enum CenterFocusedColumn {
     /// Focusing a column will not center the column.
     #[default]

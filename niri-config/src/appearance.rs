@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use knuffel::errors::DecodeError;
 use miette::{miette, IntoDiagnostic as _};
+use serde::Serialize;
 use smithay::backend::renderer::Color32F;
 
 use crate::utils::{Flag, MergeWith};
@@ -12,7 +13,7 @@ pub const DEFAULT_BACKGROUND_COLOR: Color = Color::from_array_unpremul([0.25, 0.
 pub const DEFAULT_BACKDROP_COLOR: Color = Color::from_array_unpremul([0.15, 0.15, 0.15, 1.]);
 
 /// RGB color in [0, 1] with unpremultiplied alpha.
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
@@ -83,7 +84,7 @@ impl From<Color> for Color32F {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Gradient {
     #[knuffel(property, str)]
     pub from: Color,
@@ -109,20 +110,20 @@ impl From<Color> for Gradient {
     }
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::DecodeScalar, Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GradientRelativeTo {
     #[default]
     Window,
     WorkspaceView,
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct GradientInterpolation {
     pub color_space: GradientColorSpace,
     pub hue_interpolation: HueInterpolation,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GradientColorSpace {
     #[default]
     Srgb,
@@ -131,7 +132,7 @@ pub enum GradientColorSpace {
     Oklch,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum HueInterpolation {
     #[default]
     Shorter,
@@ -140,7 +141,7 @@ pub enum HueInterpolation {
     Decreasing,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct CornerRadius {
     pub top_left: f32,
     pub top_right: f32,
@@ -228,7 +229,7 @@ impl CornerRadius {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct FocusRing {
     pub off: bool,
     pub width: f64,
@@ -255,7 +256,7 @@ impl Default for FocusRing {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Border {
     pub off: bool,
     pub width: f64,
@@ -338,7 +339,7 @@ impl MergeWith<BorderRule> for FocusRing {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Shadow {
     pub on: bool,
     pub offset: ShadowOffset,
@@ -381,7 +382,7 @@ impl MergeWith<ShadowRule> for Shadow {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ShadowOffset {
     #[knuffel(property, default)]
     pub x: FloatOrInt<-65535, 65535>,
@@ -389,7 +390,7 @@ pub struct ShadowOffset {
     pub y: FloatOrInt<-65535, 65535>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct WorkspaceShadow {
     pub off: bool,
     pub offset: ShadowOffset,
@@ -427,7 +428,7 @@ impl From<WorkspaceShadow> for Shadow {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct WorkspaceShadowPart {
     #[knuffel(child)]
     pub off: bool,
@@ -455,7 +456,7 @@ impl MergeWith<WorkspaceShadowPart> for WorkspaceShadow {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct TabIndicator {
     pub off: bool,
     pub hide_when_single_tab: bool,
@@ -526,7 +527,7 @@ impl MergeWith<TabIndicatorPart> for TabIndicator {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct TabIndicatorPart {
     #[knuffel(child)]
     pub off: bool,
@@ -562,13 +563,13 @@ pub struct TabIndicatorPart {
     pub urgent_gradient: Option<Gradient>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct TabIndicatorLength {
     #[knuffel(property)]
     pub total_proportion: Option<f64>,
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum TabIndicatorPosition {
     Left,
     Right,
@@ -576,7 +577,7 @@ pub enum TabIndicatorPosition {
     Bottom,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct InsertHint {
     pub off: bool,
     pub color: Color,
@@ -604,7 +605,7 @@ impl MergeWith<InsertHintPart> for InsertHint {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct InsertHintPart {
     #[knuffel(child)]
     pub off: bool,
@@ -616,13 +617,13 @@ pub struct InsertHintPart {
     pub gradient: Option<Gradient>,
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum BlockOutFrom {
     Screencast,
     ScreenCapture,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct BorderRule {
     #[knuffel(child)]
     pub off: bool,
@@ -644,7 +645,7 @@ pub struct BorderRule {
     pub urgent_gradient: Option<Gradient>,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct ShadowRule {
     #[knuffel(child)]
     pub off: bool,
@@ -664,7 +665,7 @@ pub struct ShadowRule {
     pub inactive_color: Option<Color>,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct TabIndicatorRule {
     #[knuffel(child)]
     pub active_color: Option<Color>,

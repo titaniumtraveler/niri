@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 
 use knuffel::errors::DecodeError;
+use serde::Serialize;
 use smithay::input::keyboard::Keysym;
 
 use crate::utils::{expect_only_children, MergeWith};
 use crate::{Action, Bind, Color, FloatOrInt, Key, Modifiers, Trigger};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct RecentWindows {
     pub on: bool,
     pub debounce_ms: u16,
@@ -67,7 +68,7 @@ impl MergeWith<RecentWindowsPart> for RecentWindows {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct MruHighlight {
     pub active_color: Color,
     pub urgent_color: Color,
@@ -105,7 +106,7 @@ impl MergeWith<MruHighlightPart> for MruHighlight {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct MruPreviews {
     pub max_height: f64,
     pub max_scale: f64,
@@ -158,7 +159,7 @@ impl From<MruBind> for Bind {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
 pub enum MruDirection {
     /// Most recently used to least.
     #[default]
@@ -167,7 +168,7 @@ pub enum MruDirection {
     Backward,
 }
 
-#[derive(knuffel::DecodeScalar, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(knuffel::DecodeScalar, Clone, Copy, Debug, Default, PartialEq, Serialize)]
 pub enum MruScope {
     /// All windows.
     #[default]
@@ -178,7 +179,7 @@ pub enum MruScope {
     Workspace,
 }
 
-#[derive(knuffel::DecodeScalar, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(knuffel::DecodeScalar, Clone, Copy, Debug, Default, PartialEq, Serialize)]
 pub enum MruFilter {
     /// All windows.
     #[default]

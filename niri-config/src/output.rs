@@ -6,20 +6,21 @@ use knuffel::errors::DecodeError;
 use knuffel::traits::ErrorSpan;
 use knuffel::Decode;
 use niri_ipc::{ConfiguredMode, HSyncPolarity, Transform, VSyncPolarity};
+use serde::Serialize;
 
 use crate::gestures::HotCorners;
 use crate::{Color, FloatOrInt, LayoutPart};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize)]
 pub struct Outputs(pub Vec<Output>);
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Mode {
     pub custom: bool,
     pub mode: ConfiguredMode,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Modeline {
     /// The rate at which pixels are drawn in MHz.
     pub clock: f64,
@@ -47,7 +48,7 @@ pub struct Modeline {
     pub vsync_polarity: niri_ipc::VSyncPolarity,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct Output {
     #[knuffel(child)]
     pub off: bool,
@@ -120,7 +121,7 @@ pub struct OutputName {
     pub serial: Option<String>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Position {
     #[knuffel(property)]
     pub x: i32,
@@ -128,7 +129,7 @@ pub struct Position {
     pub y: i32,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq, Default)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Default, Serialize)]
 pub struct Vrr {
     #[knuffel(property, default = false)]
     pub on_demand: bool,

@@ -1,7 +1,8 @@
 use crate::utils::MergeWith;
 use crate::FloatOrInt;
+use serde::Serialize;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct Gestures {
     pub dnd_edge_view_scroll: DndEdgeViewScroll,
     pub dnd_edge_workspace_switch: DndEdgeWorkspaceSwitch,
@@ -29,7 +30,7 @@ impl MergeWith<GesturesPart> for Gestures {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct DndEdgeViewScroll {
     pub trigger_width: f64,
     pub delay_ms: u16,
@@ -63,7 +64,7 @@ impl MergeWith<DndEdgeViewScrollPart> for DndEdgeViewScroll {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct DndEdgeWorkspaceSwitch {
     pub trigger_height: f64,
     pub delay_ms: u16,
@@ -97,7 +98,7 @@ impl MergeWith<DndEdgeWorkspaceSwitchPart> for DndEdgeWorkspaceSwitch {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Serialize)]
 pub struct HotCorners {
     #[knuffel(child)]
     pub off: bool,

@@ -1,11 +1,12 @@
 use niri_ipc::ColumnDisplay;
+use serde::Serialize;
 
 use crate::appearance::{BlockOutFrom, BorderRule, CornerRadius, ShadowRule, TabIndicatorRule};
 use crate::layout::DefaultPresetSize;
 use crate::utils::RegexEq;
 use crate::FloatOrInt;
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct WindowRule {
     #[knuffel(children(name = "match"))]
     pub matches: Vec<Match>,
@@ -74,7 +75,7 @@ pub struct WindowRule {
     pub tiled_state: Option<bool>,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct Match {
     #[knuffel(property, str)]
     pub app_id: Option<RegexEq>,
@@ -96,7 +97,7 @@ pub struct Match {
     pub at_startup: Option<bool>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct FloatingPosition {
     #[knuffel(property)]
     pub x: FloatOrInt<-65535, 65535>,
@@ -106,7 +107,7 @@ pub struct FloatingPosition {
     pub relative_to: RelativeTo,
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::DecodeScalar, Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum RelativeTo {
     #[default]
     TopLeft,

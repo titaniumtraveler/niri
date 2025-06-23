@@ -1,10 +1,11 @@
 use knuffel::errors::DecodeError;
 use knuffel::Decode as _;
+use serde::Serialize;
 
 use crate::utils::{expect_only_children, parse_arg_node, MergeWith};
 use crate::FloatOrInt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct Animations {
     pub off: bool,
     pub slowdown: f64,
@@ -101,25 +102,25 @@ impl MergeWith<AnimationsPart> for Animations {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Animation {
     pub off: bool,
     pub kind: Kind,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum Kind {
     Easing(EasingParams),
     Spring(SpringParams),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct EasingParams {
     pub duration_ms: u32,
     pub curve: Curve,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum Curve {
     Linear,
     EaseOutQuad,
@@ -128,14 +129,14 @@ pub enum Curve {
     CubicBezier(f64, f64, f64, f64),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct SpringParams {
     pub damping_ratio: f64,
     pub stiffness: u32,
     pub epsilon: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct WorkspaceSwitchAnim(pub Animation);
 
 impl Default for WorkspaceSwitchAnim {
@@ -151,7 +152,7 @@ impl Default for WorkspaceSwitchAnim {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WindowOpenAnim {
     pub anim: Animation,
     pub custom_shader: Option<String>,
@@ -172,7 +173,7 @@ impl Default for WindowOpenAnim {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WindowCloseAnim {
     pub anim: Animation,
     pub custom_shader: Option<String>,
@@ -193,7 +194,7 @@ impl Default for WindowCloseAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct HorizontalViewMovementAnim(pub Animation);
 
 impl Default for HorizontalViewMovementAnim {
@@ -209,7 +210,7 @@ impl Default for HorizontalViewMovementAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct WindowMovementAnim(pub Animation);
 
 impl Default for WindowMovementAnim {
@@ -225,7 +226,7 @@ impl Default for WindowMovementAnim {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WindowResizeAnim {
     pub anim: Animation,
     pub custom_shader: Option<String>,
@@ -247,7 +248,7 @@ impl Default for WindowResizeAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ConfigNotificationOpenCloseAnim(pub Animation);
 
 impl Default for ConfigNotificationOpenCloseAnim {
@@ -263,7 +264,7 @@ impl Default for ConfigNotificationOpenCloseAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ExitConfirmationOpenCloseAnim(pub Animation);
 
 impl Default for ExitConfirmationOpenCloseAnim {
@@ -279,7 +280,7 @@ impl Default for ExitConfirmationOpenCloseAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ScreenshotUiOpenAnim(pub Animation);
 
 impl Default for ScreenshotUiOpenAnim {
@@ -294,7 +295,7 @@ impl Default for ScreenshotUiOpenAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct OverviewOpenCloseAnim(pub Animation);
 
 impl Default for OverviewOpenCloseAnim {
@@ -310,7 +311,7 @@ impl Default for OverviewOpenCloseAnim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct RecentWindowsCloseAnim(pub Animation);
 
 impl Default for RecentWindowsCloseAnim {
