@@ -1841,7 +1841,7 @@ fn make_preset_opened_binds() -> Vec<Bind> {
                 // The modifier is filled dynamically.
                 modifiers: Modifiers::empty(),
             },
-            action,
+            action: vec![action],
             repeat: true,
             cooldown: None,
             allow_when_locked: false,
@@ -1889,34 +1889,35 @@ fn make_dynamic_opened_binds(config: &Config, submap: &Submap) -> Vec<Bind> {
     let mut binds: HashMap<Trigger, Vec<Bind>> = HashMap::new();
 
     for bind in config.binds.0.get(submap).map(Vec::as_slice).unwrap_or(&[]) {
-        let action = match &bind.action {
-            Action::FocusColumnRight
-            | Action::FocusColumnRightOrFirst
-            | Action::FocusColumnOrMonitorRight
-            | Action::FocusWindowDownOrColumnRight => Action::MruAdvance {
-                direction: MruDirection::Forward,
-                scope: None,
-                filter: None,
-            },
-            Action::FocusColumnLeft
-            | Action::FocusColumnLeftOrLast
-            | Action::FocusColumnOrMonitorLeft
-            | Action::FocusWindowUpOrColumnLeft => Action::MruAdvance {
-                direction: MruDirection::Backward,
-                scope: None,
-                filter: None,
-            },
-            Action::FocusColumnFirst => Action::MruFirst,
-            Action::FocusColumnLast => Action::MruLast,
-            Action::CloseWindow => Action::MruCloseCurrentWindow,
-            x @ Action::Screenshot(_, _) => x.clone(),
-            _ => continue,
-        };
-
-        binds.entry(bind.key.trigger).or_default().push(Bind {
-            action,
-            ..bind.clone()
-        });
+        for action in &bind.action {
+            let action = match action {
+                Action::FocusColumnRight
+                | Action::FocusColumnRightOrFirst
+                | Action::FocusColumnOrMonitorRight
+                | Action::FocusWindowDownOrColumnRight => Action::MruAdvance {
+                    direction: MruDirection::Forward,
+                    scope: None,
+                    filter: None,
+                },
+                Action::FocusColumnLeft
+                | Action::FocusColumnLeftOrLast
+                | Action::FocusColumnOrMonitorLeft
+                | Action::FocusWindowUpOrColumnLeft => Action::MruAdvance {
+                    direction: MruDirection::Backward,
+                    scope: None,
+                    filter: None,
+                },
+                Action::FocusColumnFirst => Action::MruFirst,
+                Action::FocusColumnLast => Action::MruLast,
+                Action::CloseWindow => Action::MruCloseCurrentWindow,
+                x @ Action::Screenshot(_, _) => x.clone(),
+                _ => continue,
+            };
+            binds.entry(bind.key.trigger).or_default().push(Bind {
+                action: vec![action],
+                ..bind.clone()
+            });
+        }
     }
 
     let mut rv = Vec::new();

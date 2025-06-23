@@ -24,7 +24,7 @@ pub struct Binds(pub HashMap<Submap, Vec<Bind>>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bind {
     pub key: Key,
-    pub action: Action,
+    pub action: Vec<Action>,
     pub repeat: bool,
     pub cooldown: Option<Duration>,
     pub allow_when_locked: bool,
@@ -1090,7 +1090,7 @@ where
         let dummy = Self {
             bind: Bind {
                 key,
-                action: Action::Spawn(vec![]),
+                action: vec![Action::Spawn(vec![])],
                 repeat: true,
                 cooldown: None,
                 allow_when_locked: false,
@@ -1114,7 +1114,7 @@ where
                 Ok(Self {
                     bind: Bind {
                         key,
-                        action: Action::SubmapSet(Submap::ResolveCurrent),
+                        action: vec![Action::SubmapSet(Submap::ResolveCurrent)],
                         repeat,
                         cooldown,
                         allow_when_locked,
@@ -1125,49 +1125,53 @@ where
                     subbinds,
                 })
             } else {
-                for unwanted_child in children {
-                    ctx.emit_error(DecodeError::unexpected(
-                        unwanted_child,
-                        "node",
-                        "only one action is allowed per keybind",
-                    ));
-                }
-                match Action::decode_node(child, ctx) {
-                    Ok(action) => {
-                        if !matches!(action, Action::Spawn(_)) {
-                            if let Some(node) = allow_when_locked_node {
-                                ctx.emit_error(DecodeError::unexpected(
-                                    node,
-                                    "property",
-                                    "allow-when-locked can only be set on spawn binds",
-                                ));
+                let mut has_err = false;
+                let mut actions =
+                    Vec::with_capacity(node.children.as_ref().map(|vec| vec.len()).unwrap_or(0));
+
+                for child in node.children() {
+                    match Action::decode_node(child, ctx) {
+                        Ok(action) => {
+                            if !matches!(action, Action::Spawn(_)) {
+                                if let Some(node) = allow_when_locked_node {
+                                    has_err = true;
+                                    ctx.emit_error(DecodeError::unexpected(
+                                        node,
+                                        "property",
+                                        "allow-when-locked can only be set on spawn binds",
+                                    ));
+                                }
                             }
-                        }
 
-                        // The toggle-inhibit action must always be uninhibitable.
-                        // Otherwise, it would be impossible to trigger it.
-                        if matches!(action, Action::ToggleKeyboardShortcutsInhibit) {
-                            allow_inhibiting = false;
+                            // The toggle-inhibit action must always be uninhibitable.
+                            // Otherwise, it would be impossible to trigger it.
+                            if matches!(action, Action::ToggleKeyboardShortcutsInhibit) {
+                                allow_inhibiting = false;
+                            }
+                            actions.push(action)
                         }
-
-                        Ok(Self {
-                            bind: Bind {
-                                key,
-                                action,
-                                repeat,
-                                cooldown,
-                                allow_when_locked,
-                                allow_inhibiting,
-                                hotkey_overlay_title,
-                            },
-                            submap: dummy.submap,
-                            subbinds,
-                        })
+                        Err(e) => {
+                            ctx.emit_error(e);
+                            has_err = true;
+                        }
                     }
-                    Err(e) => {
-                        ctx.emit_error(e);
-                        Ok(dummy)
-                    }
+                }
+                if !has_err {
+                    Ok(Self {
+                        bind: Bind {
+                            key,
+                            action: actions,
+                            repeat,
+                            cooldown,
+                            allow_when_locked,
+                            allow_inhibiting,
+                            hotkey_overlay_title,
+                        },
+                        submap: dummy.submap,
+                        subbinds,
+                    })
+                } else {
+                    Ok(dummy)
                 }
             }
         } else {
@@ -1203,12 +1207,14 @@ impl BindWithSubmap {
     }
 
     fn resolve_submap_action(&mut self, current: &str) {
-        if let Action::SubmapSet(action @ Submap::ResolveCurrent) = &mut self.bind.action {
-            *action = if current.is_empty() {
-                Submap::Default
-            } else {
-                Submap::Custom(current.to_owned())
-            };
+        for action in &mut self.bind.action {
+            if let Action::SubmapSet(action @ Submap::ResolveCurrent) = action {
+                *action = if current.is_empty() {
+                    Submap::Default
+                } else {
+                    Submap::Custom(current.to_owned())
+                };
+            }
         }
     }
 
