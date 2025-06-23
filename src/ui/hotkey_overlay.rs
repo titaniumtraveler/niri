@@ -150,7 +150,7 @@ impl HotkeyOverlay {
                     .binds
                     .0
                     .get(submap_state)
-                    .map(|vec| vec.as_slice())
+                    .map(Vec::as_slice)
                     .unwrap_or(&[]),
                 action,
             ) else {
@@ -178,7 +178,7 @@ fn format_bind(binds: &[Bind], action: &Action) -> Option<(Option<Key>, String)>
     let mut found_null_title = false;
 
     for bind in binds {
-        if bind.action != *action {
+        if bind.action.first() != Some(action) {
             continue;
         }
 
@@ -219,7 +219,7 @@ fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Act
         .binds
         .0
         .get(submap_state)
-        .map(|vec| vec.as_slice())
+        .map(Vec::as_slice)
         .unwrap_or(&[]);
 
     // Collect actions that we want to show.
@@ -227,9 +227,15 @@ fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Act
 
     // Prefer Quit(false) if found, otherwise try Quit(true), and if there's neither, fall back to
     // Quit(false).
-    if binds.iter().any(|bind| bind.action == Action::Quit(false)) {
+    if binds
+        .iter()
+        .any(|bind| bind.action.first() == Some(&Action::Quit(false)))
+    {
         actions.push(&Action::Quit(false));
-    } else if binds.iter().any(|bind| bind.action == Action::Quit(true)) {
+    } else if binds
+        .iter()
+        .any(|bind| bind.action.first() == Some(&Action::Quit(true)))
+    {
         actions.push(&Action::Quit(true));
     } else {
         actions.push(&Action::Quit(false));
@@ -246,30 +252,34 @@ fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Act
     ]);
 
     // Prefer move-column-to-workspace-down, but fall back to move-window-to-workspace-down.
-    if let Some(bind) = binds
-        .iter()
-        .find(|bind| matches!(bind.action, Action::MoveColumnToWorkspaceDown(_)))
-    {
-        actions.push(&bind.action);
-    } else if binds
-        .iter()
-        .any(|bind| matches!(bind.action, Action::MoveWindowToWorkspaceDown(_)))
-    {
+    if let Some(action) = binds.iter().find_map(|bind| match bind.action.first() {
+        Some(action @ Action::MoveColumnToWorkspaceDown(_)) => Some(action),
+        _ => None,
+    }) {
+        actions.push(action);
+    } else if binds.iter().any(|bind| {
+        matches!(
+            bind.action.first(),
+            Some(&Action::MoveWindowToWorkspaceDown(_))
+        )
+    }) {
         actions.push(&Action::MoveWindowToWorkspaceDown(true));
     } else {
         actions.push(&Action::MoveColumnToWorkspaceDown(true));
     }
 
-    // Same for -up.
-    if let Some(bind) = binds
-        .iter()
-        .find(|bind| matches!(bind.action, Action::MoveColumnToWorkspaceUp(_)))
-    {
-        actions.push(&bind.action);
-    } else if binds
-        .iter()
-        .any(|bind| matches!(bind.action, Action::MoveWindowToWorkspaceUp(_)))
-    {
+    // Prefer move-column-to-workspace-down, but fall back to move-window-to-workspace-down.
+    if let Some(action) = binds.iter().find_map(|bind| match bind.action.first() {
+        Some(action @ Action::MoveColumnToWorkspaceUp(_)) => Some(action),
+        _ => None,
+    }) {
+        actions.push(action);
+    } else if binds.iter().any(|bind| {
+        matches!(
+            bind.action.first(),
+            Some(&Action::MoveWindowToWorkspaceUp(_))
+        )
+    }) {
         actions.push(&Action::MoveWindowToWorkspaceUp(true));
     } else {
         actions.push(&Action::MoveColumnToWorkspaceUp(true));
@@ -286,34 +296,38 @@ fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Act
     ]);
 
     // Screenshot is not as important, can omit if not bound.
-    if let Some(bind) = binds
-        .iter()
-        .find(|bind| matches!(bind.action, Action::Screenshot(_, _)))
-    {
-        actions.push(&bind.action);
+    if let Some(action) = binds.iter().find_map(|bind| match bind.action.first() {
+        Some(action @ Action::Screenshot(_, _)) => Some(action),
+        _ => None,
+    }) {
+        actions.push(action);
     }
 
     // Add actions with a custom hotkey-overlay-title.
     for bind in binds {
         if matches!(bind.hotkey_overlay_title, Some(Some(_))) {
-            // Avoid duplicate actions.
-            if !actions.contains(&&bind.action) {
-                actions.push(&bind.action);
+            if let Some(action) = bind.action.first() {
+                // Avoid duplicate actions.
+                if !actions.contains(&action) {
+                    actions.push(action);
+                }
             }
         }
     }
 
     // Add the spawn actions.
-    for bind in binds.iter().filter(|bind| {
-        matches!(bind.action, Action::Spawn(_) | Action::SpawnSh(_))
-            // Only show binds with Mod or Super to filter out stuff like volume up/down.
-            && (bind.key.modifiers.contains(Modifiers::COMPOSITOR)
+    for action in binds.iter().filter_map(|bind| match bind.action.first() {
+        // Only show binds with Mod or Super to filter out stuff like volume up/down.
+        Some(action @ Action::Spawn(_) | action @ Action::SpawnSh(_))
+            if (bind.key.modifiers.contains(Modifiers::COMPOSITOR)
                 || bind.key.modifiers.contains(Modifiers::SUPER))
             // Also filter out wheel and touchpad scroll binds.
-            && matches!(bind.key.trigger, Trigger::Keysym(_))
+            && matches!(bind.key.trigger, Trigger::Keysym(_)) =>
+        {
+            Some(action)
+        }
+        _ => None,
     }) {
-        let action = &bind.action;
-
         // We only show one bind for each action, so we need to deduplicate the Spawn actions.
         if !actions.contains(&action) {
             actions.push(action);
@@ -322,7 +336,7 @@ fn collect_actions<'a>(config: &'a Config, submap_state: &Submap) -> Vec<&'a Act
 
     if config.hotkey_overlay.hide_not_bound {
         // Only keep actions that have been bound
-        actions.retain(|&action| binds.iter().any(|bind| bind.action == *action))
+        actions.retain(|&action| binds.iter().any(|bind| bind.action.first() == Some(action)))
     }
 
     actions
@@ -355,7 +369,7 @@ fn render(
                     .binds
                     .0
                     .get(submap_state)
-                    .map(|vec| vec.as_slice())
+                    .map(Vec::as_slice)
                     .unwrap_or(&[]),
                 action,
             )
@@ -645,10 +659,10 @@ mod tests {
     fn check(config: &str, action: Action) -> String {
         let config = Config::parse_mem(config).unwrap();
         if let Some((key, title)) = format_bind(
-            &config
+            config
                 .binds
                 .0
-                .get(Submap::Default)
+                .get(&Submap::Default)
                 .map(Vec::as_slice)
                 .unwrap_or(&[]),
             &action,
