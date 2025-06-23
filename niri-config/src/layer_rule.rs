@@ -1,7 +1,8 @@
 use crate::appearance::{BlockOutFrom, CornerRadius, ShadowRule};
 use crate::utils::RegexEq;
+use serde::Serialize;
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct LayerRule {
     #[knuffel(children(name = "match"))]
     pub matches: Vec<Match>,
@@ -22,7 +23,7 @@ pub struct LayerRule {
     pub baba_is_float: Option<bool>,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct Match {
     #[knuffel(property, str)]
     pub namespace: Option<RegexEq>,

@@ -1,8 +1,9 @@
 use knuffel::errors::DecodeError;
+use serde::Serialize;
 
 use crate::LayoutPart;
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct Workspace {
     #[knuffel(argument)]
     pub name: WorkspaceName,
@@ -12,10 +13,10 @@ pub struct Workspace {
     pub layout: Option<WorkspaceLayoutPart>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WorkspaceName(pub String);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WorkspaceLayoutPart(pub LayoutPart);
 
 impl<S: knuffel::traits::ErrorSpan> knuffel::Decode<S> for WorkspaceLayoutPart {

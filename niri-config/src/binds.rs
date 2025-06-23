@@ -9,6 +9,7 @@ use miette::miette;
 use niri_ipc::{
     ColumnDisplay, LayoutSwitchTarget, PositionChange, SizeChange, WorkspaceReferenceArg,
 };
+use serde::Serialize;
 use smithay::input::keyboard::keysyms::KEY_NoSymbol;
 use smithay::input::keyboard::xkb::{
     keysym_from_name, keysym_get_name, KEYSYM_CASE_INSENSITIVE, KEYSYM_NO_FLAGS,
@@ -17,10 +18,10 @@ use smithay::input::keyboard::Keysym;
 
 use crate::utils::{expect_only_children, MergeWith};
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub struct Binds(pub HashMap<Submap, Vec<Bind>>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Bind {
     pub key: Key,
     pub action: Vec<Action>,
@@ -31,7 +32,7 @@ pub struct Bind {
     pub hotkey_overlay_title: Option<Option<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BindWithSubmap {
     bind: Bind,
     submap: Submap,
@@ -42,6 +43,15 @@ pub struct BindWithSubmap {
 pub struct Key {
     pub trigger: Trigger,
     pub modifiers: Modifiers,
+}
+
+impl Serialize for Key {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&self)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -147,7 +157,7 @@ impl std::fmt::Display for Key {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Serialize)]
 pub struct SwitchBinds {
     #[knuffel(child)]
     pub lid_open: Option<SwitchAction>,
@@ -171,14 +181,14 @@ impl MergeWith<SwitchBinds> for SwitchBinds {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct SwitchAction {
     #[knuffel(child, unwrap(arguments))]
     pub spawn: Vec<String>,
 }
 
 // Remember to add new actions to the CLI enum too.
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub enum Action {
     Quit(#[knuffel(property(name = "skip-confirmation"), default)] bool),
     #[knuffel(skip)]
@@ -449,7 +459,7 @@ pub enum Action {
     LoadConfigFile,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub enum Submap {
     Default,
     ResolveCurrent,
@@ -809,7 +819,7 @@ impl From<niri_ipc::Action> for Action {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub enum WorkspaceReference {
     Id(u64),
     Index(u8),

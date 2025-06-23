@@ -2,19 +2,21 @@ use crate::appearance::{Color, WorkspaceShadow, WorkspaceShadowPart, DEFAULT_BAC
 use crate::utils::{Flag, MergeWith};
 use crate::FloatOrInt;
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq)]
+use serde::Serialize;
+
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SpawnAtStartup {
     #[knuffel(arguments)]
     pub command: Vec<String>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SpawnShAtStartup {
     #[knuffel(argument)]
     pub command: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Cursor {
     pub xcursor_theme: String,
     pub xcursor_size: u8,
@@ -53,7 +55,7 @@ impl MergeWith<CursorPart> for Cursor {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct ScreenshotPath(#[knuffel(argument)] pub Option<String>);
 
 impl Default for ScreenshotPath {
@@ -64,13 +66,13 @@ impl Default for ScreenshotPath {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct HotkeyOverlay {
     pub skip_at_startup: bool,
     pub hide_not_bound: bool,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct HotkeyOverlayPart {
     #[knuffel(child)]
     pub skip_at_startup: Option<Flag>,
@@ -84,12 +86,12 @@ impl MergeWith<HotkeyOverlayPart> for HotkeyOverlay {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ConfigNotification {
     pub disable_failed: bool,
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ConfigNotificationPart {
     #[knuffel(child)]
     pub disable_failed: Option<Flag>,
@@ -101,7 +103,7 @@ impl MergeWith<ConfigNotificationPart> for ConfigNotification {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Clipboard {
     pub disable_primary: bool,
 }
@@ -118,7 +120,7 @@ impl MergeWith<ClipboardPart> for Clipboard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Overview {
     pub zoom: f64,
     pub backdrop_color: Color,
@@ -152,10 +154,10 @@ impl MergeWith<OverviewPart> for Overview {
     }
 }
 
-#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq, Eq, Serialize)]
 pub struct Environment(#[knuffel(children)] pub Vec<EnvironmentVariable>);
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct EnvironmentVariable {
     #[knuffel(node_name)]
     pub name: String,
@@ -163,7 +165,7 @@ pub struct EnvironmentVariable {
     pub value: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct XwaylandSatellite {
     pub off: bool,
     pub path: String,

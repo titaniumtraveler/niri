@@ -1,12 +1,13 @@
 use niri_ipc::{ConfiguredMode, Transform};
+use serde::Serialize;
 
 use crate::gestures::HotCorners;
 use crate::{Color, FloatOrInt, LayoutPart};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize)]
 pub struct Outputs(pub Vec<Output>);
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Serialize)]
 pub struct Output {
     #[knuffel(child)]
     pub off: bool,
@@ -76,7 +77,7 @@ pub struct OutputName {
     pub serial: Option<String>,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Position {
     #[knuffel(property)]
     pub x: i32,
@@ -84,7 +85,7 @@ pub struct Position {
     pub y: i32,
 }
 
-#[derive(knuffel::Decode, Debug, Clone, PartialEq, Default)]
+#[derive(knuffel::Decode, Debug, Clone, PartialEq, Default, Serialize)]
 pub struct Vrr {
     #[knuffel(property, default = false)]
     pub on_demand: bool,

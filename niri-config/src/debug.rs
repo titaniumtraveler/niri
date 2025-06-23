@@ -1,8 +1,9 @@
+use serde::Serialize;
 use std::path::PathBuf;
 
 use crate::utils::{Flag, MergeWith};
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub struct Debug {
     pub preview_render: Option<PreviewRender>,
     pub dbus_interfaces_in_non_session_instances: bool,
@@ -100,7 +101,7 @@ impl MergeWith<DebugPart> for Debug {
     }
 }
 
-#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(knuffel::DecodeScalar, Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PreviewRender {
     Screencast,
     ScreenCapture,
