@@ -15,6 +15,8 @@ Primary features are
 - Some helper functions/cli options to aid me in the development 
 For a full list I recommend looking at the commits made on top of upstream: [`git log main..fork/main`](https://github.com/YaLTeR/niri/compare/main...titaniumtraveler:niri:fork/main)
 
+For an example of how to use these features see my configuration: <https://github.com/titaniumtraveler/config.niri/blob/961297dcb33341ed53c92a759ee9f3c647b44051/config.kdl#L67-L212>
+
 ## Why are these features no upstreamed yet?
 
 None of the features are in a state to be upstreamed:
