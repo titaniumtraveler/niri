@@ -1167,11 +1167,15 @@ where
 
 impl BindWithSubmap {
     pub fn resolve_submap(&mut self, current: &mut String) {
-        self.resolve_submap_name(current);
+        let orig_len = self.resolve_submap_name(current);
+
+        Self::append_key(self.bind.key, current);
         self.resolve_submap_action(current);
+
+        current.truncate(orig_len);
     }
 
-    fn resolve_submap_name(&mut self, current: &mut String) {
+    fn resolve_submap_name(&mut self, current: &mut String) -> usize {
         match (&self.submap, current.is_empty()) {
             (Submap::Default | Submap::ResolveCurrent, true) => {}
             (Submap::Default | Submap::ResolveCurrent, false) => {
@@ -1185,6 +1189,7 @@ impl BindWithSubmap {
                 self.submap = Submap::Custom(current.to_owned());
             }
         }
+        current.len()
     }
 
     fn resolve_submap_action(&mut self, current: &str) {
