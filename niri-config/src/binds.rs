@@ -484,11 +484,24 @@ pub enum Action {
     MruCycleScope,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Submap {
     Default,
     ResolveCurrent,
     Custom(String),
+}
+
+impl Serialize for Submap {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Submap::Default => serializer.serialize_str("default"),
+            Submap::ResolveCurrent => serializer.serialize_str("<current>"),
+            Submap::Custom(submap) => serializer.serialize_str(submap),
+        }
+    }
 }
 
 impl Submap {

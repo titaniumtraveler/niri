@@ -98,11 +98,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Handle subcommands.
     if let Some(subcommand) = cli.subcommand {
         match subcommand {
-            Sub::Validate { config } => {
+            Sub::Validate { config, json } => {
                 tracy_client::Client::start();
 
-                config_path(config).load().config?;
-                info!("config is valid");
+                let config = config_path(config).load().config?;
+                if json {
+                    serde_json::to_writer(io::stdout(), &config)?;
+                } else {
+                    info!("config is valid");
+                }
                 return Ok(());
             }
             Sub::Msg { msg, json } => {
