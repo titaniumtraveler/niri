@@ -61,6 +61,8 @@ pub fn handle_msg(mut msg: Msg, json: bool, print_request: bool) -> anyhow::Resu
         println!("{json_str}");
         return Ok(());
     }
+
+    let is_event_stream = matches!(request, Request::EventStream);
     let mut socket = Socket::connect().context("error connecting to the niri socket")?;
 
     let result = socket.send(request);
@@ -563,6 +565,15 @@ pub fn handle_msg(mut msg: Msg, json: bool, print_request: bool) -> anyhow::Resu
         Msg::RawRequest => {
             let output = serde_json::to_string(&response).context("error formatting response")?;
             println!("{output}");
+
+            if is_event_stream {
+                let mut read_event = socket.read_events();
+                loop {
+                    let event = read_event().context("error reading event from niri")?;
+                    let event = serde_json::to_string(&event).context("error formatting event")?;
+                    println!("{event}");
+                }
+            }
         }
     }
 
