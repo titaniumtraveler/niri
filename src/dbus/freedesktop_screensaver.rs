@@ -5,13 +5,12 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use anyhow::Context;
 use futures_util::StreamExt;
-use zbus::fdo::{self, RequestNameFlags};
 use zbus::message::Header;
 use zbus::names::{OwnedUniqueName, UniqueName};
 use zbus::zvariant::NoneValue;
-use zbus::{interface, Task};
+use zbus::{fdo, interface, Task};
 
-use super::Start;
+use super::{request_name, Start};
 
 #[derive(Clone)]
 pub struct ScreenSaver {
@@ -136,10 +135,6 @@ impl Start for ScreenSaver {
         let monitor_task = self.monitor_task.clone();
 
         let conn = zbus::blocking::Connection::session()?;
-        let flags = RequestNameFlags::AllowReplacement
-            | RequestNameFlags::ReplaceExisting
-            | RequestNameFlags::DoNotQueue;
-
         let org_fd_ss_registered = conn
             .object_server()
             .at("/org/freedesktop/ScreenSaver", self.clone())?;
@@ -149,7 +144,7 @@ impl Start for ScreenSaver {
             anyhow::bail!("failed to register any org.freedesktop.ScreenSaver interface")
         }
 
-        conn.request_name_with_flags("org.freedesktop.ScreenSaver", flags)?;
+        request_name(&conn, "org.freedesktop.ScreenSaver")?;
 
         let async_conn = conn.inner();
         let future = {

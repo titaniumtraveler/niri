@@ -1,4 +1,5 @@
 use zbus::blocking::Connection;
+use zbus::fdo::RequestNameFlags;
 use zbus::object_server::Interface;
 
 use crate::niri::State;
@@ -184,6 +185,15 @@ impl DBusServers {
 
         niri.dbus = Some(dbus);
     }
+}
+
+fn request_name(conn: &Connection, name: &'static str) -> zbus::Result<()> {
+    let flags = RequestNameFlags::AllowReplacement
+        | RequestNameFlags::ReplaceExisting
+        | RequestNameFlags::DoNotQueue;
+
+    conn.request_name_with_flags(name, flags)?;
+    Ok(())
 }
 
 fn try_start<I: Start>(iface: I) -> Option<Connection> {
