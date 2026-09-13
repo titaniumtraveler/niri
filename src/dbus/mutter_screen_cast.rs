@@ -318,11 +318,11 @@ impl ScreenCast {
 }
 
 impl Start for ScreenCast {
-    fn start(self) -> anyhow::Result<zbus::blocking::Connection> {
+    fn start(self, monitor: bool) -> anyhow::Result<zbus::blocking::Connection> {
         let conn = zbus::blocking::Connection::session()?;
         conn.object_server()
             .at("/org/gnome/Mutter/ScreenCast", self)?;
-        request_name(&conn, "org.gnome.Mutter.ScreenCast")?;
+        request_name(&conn, "org.gnome.Mutter.ScreenCast", monitor)?;
 
         Ok(conn)
     }

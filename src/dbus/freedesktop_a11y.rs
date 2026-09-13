@@ -563,7 +563,7 @@ impl Manager {
         }
     }
 
-    pub fn start(&self) -> anyhow::Result<zbus::blocking::Connection> {
+    pub fn start(&self, monitor: bool) -> anyhow::Result<zbus::blocking::Connection> {
         let conn = zbus::blocking::Connection::session()?;
         conn.object_server().at(
             "/org/freedesktop/a11y/Manager",
@@ -573,7 +573,7 @@ impl Manager {
             "/org/freedesktop/a11y/Manager",
             self.pointer_locator.clone(),
         )?;
-        request_name(&conn, "org.freedesktop.a11y.Manager")?;
+        request_name(&conn, "org.freedesktop.a11y.Manager", monitor)?;
 
         let iface = conn
             .object_server()

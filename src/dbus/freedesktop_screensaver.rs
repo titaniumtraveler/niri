@@ -128,7 +128,7 @@ async fn monitor_disappeared_clients(
 }
 
 impl Start for ScreenSaver {
-    fn start(self) -> anyhow::Result<zbus::blocking::Connection> {
+    fn start(self, monitor: bool) -> anyhow::Result<zbus::blocking::Connection> {
         let is_inhibited = self.is_inhibited.clone();
         let is_broken = self.is_broken.clone();
         let inhibitors = self.inhibitors.clone();
@@ -144,7 +144,7 @@ impl Start for ScreenSaver {
             anyhow::bail!("failed to register any org.freedesktop.ScreenSaver interface")
         }
 
-        request_name(&conn, "org.freedesktop.ScreenSaver")?;
+        request_name(&conn, "org.freedesktop.ScreenSaver", monitor)?;
 
         let async_conn = conn.inner();
         let future = {

@@ -293,11 +293,11 @@ impl DisplayConfig {
 }
 
 impl Start for DisplayConfig {
-    fn start(self) -> anyhow::Result<zbus::blocking::Connection> {
+    fn start(self, monitor: bool) -> anyhow::Result<zbus::blocking::Connection> {
         let conn = zbus::blocking::Connection::session()?;
         conn.object_server()
             .at("/org/gnome/Mutter/DisplayConfig", self)?;
-        request_name(&conn, "org.gnome.Mutter.DisplayConfig")?;
+        request_name(&conn, "org.gnome.Mutter.DisplayConfig", monitor)?;
 
         Ok(conn)
     }

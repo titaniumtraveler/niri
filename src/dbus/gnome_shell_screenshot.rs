@@ -90,11 +90,11 @@ impl Screenshot {
 }
 
 impl Start for Screenshot {
-    fn start(self) -> anyhow::Result<zbus::blocking::Connection> {
+    fn start(self, monitor: bool) -> anyhow::Result<zbus::blocking::Connection> {
         let conn = zbus::blocking::Connection::session()?;
         conn.object_server()
             .at("/org/gnome/Shell/Screenshot", self)?;
-        request_name(&conn, "org.gnome.Shell.Screenshot")?;
+        request_name(&conn, "org.gnome.Shell.Screenshot", monitor)?;
 
         Ok(conn)
     }
