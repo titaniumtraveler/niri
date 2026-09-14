@@ -1,4 +1,4 @@
-use std::io::ErrorKind;
+use std::io::{BufRead as _, ErrorKind};
 use std::iter::Peekable;
 use std::path::Path;
 use std::{env, slice};
@@ -50,8 +50,12 @@ pub fn handle_msg(mut msg: Msg, json: bool, print_request: bool) -> anyhow::Resu
         Msg::OverviewState => Request::OverviewState,
         Msg::Casts => Request::Casts,
         Msg::RawRequest => {
-            let stdin = std::io::stdin();
-            serde_json::from_reader(stdin).context("error parsing request JSON from stdin")?
+            let mut buf = Vec::new();
+            let mut stdin = std::io::stdin().lock();
+            stdin
+                .read_until(b'\n', &mut buf)
+                .context("error reading from stdin")?;
+            serde_json::from_slice(&buf).context("error parsing request JSON from stdin")?
         }
     };
 
