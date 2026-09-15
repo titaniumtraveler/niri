@@ -4799,8 +4799,7 @@ fn should_reset_pointer_inactivity_timer<I: InputBackend>(event: &InputEvent<I>)
 fn allowed_when_locked(action: &Action) -> bool {
     matches!(
         action,
-        Action::Quit(_)
-            | Action::ChangeVt(_)
+        Action::ChangeVt(_)
             | Action::Suspend
             | Action::PowerOffMonitors
             | Action::PowerOnMonitors
